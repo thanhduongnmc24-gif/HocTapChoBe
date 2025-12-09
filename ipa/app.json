@@ -24,6 +24,13 @@
     },
     "plugins": [
       "expo-router"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "ed04828d-7683-4899-b97a-ece2c47978d6"
+      }
+    },
+    "owner": "thanhduongnmc"
   }
 }
