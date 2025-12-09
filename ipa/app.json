@@ -4,23 +4,29 @@
     "slug": "be-vui-hoc",
     "version": "1.0.0",
     "orientation": "landscape",
-    "icon": "./assets/images/icon.png",
-    "scheme": "bevuihoc",
-    "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.hocyenbinh.bevuihoc"
+      "bundleIdentifier": "com.hocyenbinh.bevuihoc",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.hocyenbinh.bevuihoc"
     },
     "web": {
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-router"
@@ -30,7 +36,6 @@
       "eas": {
         "projectId": "ed04828d-7683-4899-b97a-ece2c47978d6"
       }
-    },
-    "owner": "thanhduongnmc"
+    }
   }
 }
