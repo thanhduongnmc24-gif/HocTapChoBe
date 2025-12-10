@@ -1,17 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, ViewStyle, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image, useWindowDimensions } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import LottieView from 'lottie-react-native';
 
 import { GAME_IMAGES } from './imageList'; 
-
-// 1. Lấy chiều rộng màn hình thực tế
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-// 2. Tính chiều rộng của 1 cái thẻ (Màn hình trừ padding chia 4 cột)
-// Trừ đi khoảng 40px padding 2 bên và khoảng cách giữa các thẻ
-const CARD_WIDTH = (SCREEN_WIDTH - 40) / 4;
 
 type GameItem = {
   id: string;
@@ -22,63 +16,63 @@ type GameItem = {
 };
 
 export default function MatchingGame() {
+  // 1. LẤY KÍCH THƯỚC MÀN HÌNH ĐỘNG
+  const { width: SCREEN_WIDTH } = useWindowDimensions();
+  
+  // Các thông số Card
+  const CONTAINER_PADDING = 10;
+  const GAP = 8;
+  const CARD_WIDTH = (SCREEN_WIDTH - (CONTAINER_PADDING * 2) - (GAP * 3)) / 4;
+  // Chiều cao thẻ = 1.2 lần chiều rộng (Tỉ lệ chuẩn thẻ bài)
+  const CARD_HEIGHT = CARD_WIDTH * 1.2;
+
   const [topRow, setTopRow] = useState<GameItem[]>([]);
   const [bottomRow, setBottomRow] = useState<GameItem[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
 
   useEffect(() => {
-    if (!GAME_IMAGES || GAME_IMAGES.length < 4) {
-      console.warn("Cảnh báo: Ít ảnh quá đại ca ơi!");
-    }
     startNewGame();
   }, []);
 
   const startNewGame = () => {
     setShowConfetti(false);
     setSelectedId(null);
-
     const pairs: {num: GameItem, img: GameItem}[] = [];
     const usedNumbers = new Set();
-    const shuffledImages = [...GAME_IMAGES].sort(() => Math.random() - 0.5);
+    // Đảo danh sách ảnh gốc
+    const shuffledImages = [...(GAME_IMAGES || [])].sort(() => Math.random() - 0.5);
+
+    if (shuffledImages.length === 0) return;
 
     while (pairs.length < 4) { 
-      const num = Math.floor(Math.random() * 12) + 1; 
-      
+      const num = Math.floor(Math.random() * 12) + 1; // Random 1-12
       if (!usedNumbers.has(num)) {
         usedNumbers.add(num);
         const imgSource = shuffledImages[pairs.length % shuffledImages.length];
-        
         pairs.push({
           num: { id: `num-${num}`, value: num, type: 'number', isMatched: false, source: null },
           img: { id: `img-${num}`, value: num, type: 'image', isMatched: false, source: imgSource }
         });
       }
     }
-
     setTopRow(pairs.map(p => p.num).sort(() => Math.random() - 0.5));
     setBottomRow(pairs.map(p => p.img).sort(() => Math.random() - 0.5));
   };
 
   const handleTap = (item: GameItem) => {
     if (item.isMatched) return;
-
     if (!selectedId) {
       setSelectedId(item.id);
     } else {
       if (selectedId === item.id) {
-        setSelectedId(null);
-        return;
+        setSelectedId(null); return;
       }
-
       const allItems = [...topRow, ...bottomRow];
       const firstItem = allItems.find(i => i.id === selectedId);
-
       if (firstItem && firstItem.type === item.type) {
-        setSelectedId(item.id);
-        return;
+        setSelectedId(item.id); return;
       }
-
       if (firstItem && firstItem.value === item.value) {
         const updateRow = (row: GameItem[]) => row.map(i => 
           (i.id === item.id || i.id === selectedId) ? { ...i, isMatched: true } : i
@@ -86,56 +80,56 @@ export default function MatchingGame() {
         setTopRow(updateRow(topRow));
         setBottomRow(updateRow(bottomRow));
         setSelectedId(null);
-
         if ([...updateRow(topRow), ...updateRow(bottomRow)].every(i => i.isMatched)) {
           setShowConfetti(true);
           setTimeout(startNewGame, 2000);
         }
       } else {
-        setSelectedId(null);
+        setTimeout(() => setSelectedId(null), 300);
       }
     }
   };
 
-  // [CẢI TIẾN] Tính kích thước dựa trên CARD_WIDTH thay vì số cố định
-  const renderImages = (count: number, source: any) => {
-    let size = 0;
-    
-    switch (count) {
-      case 1: 
-        size = CARD_WIDTH * 0.75; break; // Chiếm 75% chiều rộng thẻ
-      case 2: 
-        size = CARD_WIDTH * 0.55; break; // Chiếm 55% (xếp dọc)
-      case 3: 
-        size = CARD_WIDTH * 0.45; break; 
-      case 4: 
-        size = CARD_WIDTH * 0.38; break; // Chia đôi thẻ (trừ padding)
-      case 5: 
-        size = CARD_WIDTH * 0.35; break; 
-      case 6: 
-        size = CARD_WIDTH * 0.35; break;
-      case 7: 
-      case 8: 
-      case 9: 
-        size = CARD_WIDTH * 0.28; break; // Chia 3 cột
-      case 10: 
-        size = CARD_WIDTH * 0.28; break; // 10 hình chia 2 cột nhưng nhỏ lại tí
-      case 11: 
-      case 12: 
-        size = CARD_WIDTH * 0.26; break; // Chia 3 cột
-      default: 
-        size = CARD_WIDTH * 0.25;
-    }
+  // === 2. CÔNG THỨC TÍNH KÍCH THƯỚC ẢNH CHÍNH XÁC (BEST FIT) ===
+  const calculateImageSize = (count: number) => {
+    // Xác định số cột (cols) và số dòng (rows) tối ưu dựa trên số lượng
+    let cols = 1;
+    let rows = 1;
 
-    const customStyle: ViewStyle = count === 10 ? { width: '70%' } : { width: '100%' };
+    if (count === 1) { cols = 1; rows = 1; }
+    else if (count <= 4) { cols = 2; rows = 2; }       // Lưới 2x2
+    else if (count <= 6) { cols = 3; rows = 2; }       // Lưới 3x2
+    else if (count <= 9) { cols = 3; rows = 3; }       // Lưới 3x3
+    else { cols = 3; rows = 4; }                       // Lưới 3x4 (cho 10,11,12)
+
+    // Tính toán không gian khả dụng bên trong thẻ (trừ đi padding của thẻ)
+    const paddingCard = 6; // Padding bên trong thẻ
+    const availableWidth = CARD_WIDTH - (paddingCard * 2);
+    const availableHeight = CARD_HEIGHT - (paddingCard * 2);
+
+    // Tính kích thước tối đa cho mỗi ô ảnh
+    // Trừ thêm 2px margin mỗi bên ảnh
+    const maxW = (availableWidth / cols) - 2; 
+    const maxH = (availableHeight / rows) - 2;
+
+    // Chọn kích thước nhỏ hơn để đảm bảo vừa cả chiều ngang lẫn dọc
+    return Math.min(maxW, maxH);
+  };
+
+  const renderImages = (count: number, source: any) => {
+    const size = calculateImageSize(count);
 
     return (
-      <View style={[styles.imgContainer, customStyle]}>
+      <View style={styles.imgContainer}>
         {Array.from({length: count}).map((_, i) => (
           <Image 
             key={i} 
             source={source} 
-            style={{width: size, height: size}} 
+            style={{ 
+              width: size, 
+              height: size,     
+              margin: 1 // Khoảng cách rất nhỏ để các ảnh không dính nhau
+            }} 
             resizeMode="contain"
           />
         ))}
@@ -150,17 +144,25 @@ export default function MatchingGame() {
         key={item.id}
         style={[
           styles.card,
+          // Set cứng kích thước thẻ
+          { width: CARD_WIDTH, height: CARD_HEIGHT }, 
           item.type === 'number' ? styles.cardTop : styles.cardBottom,
           item.isMatched && styles.cardMatched,
           isSelected && styles.cardSelected
         ]}
         onPress={() => handleTap(item)}
         activeOpacity={0.8}
+        disabled={item.isMatched}
       >
         {item.isMatched ? (
-          <Ionicons name="checkmark-circle" size={40} color="#fff" />
+          <Ionicons name="checkmark-circle" size={CARD_WIDTH * 0.4} color="#fff" />
         ) : item.type === 'number' ? (
-          <Text style={[styles.numberText, { fontSize: CARD_WIDTH * 0.4 }]}>
+          <Text 
+            style={[styles.numberText, { fontSize: CARD_HEIGHT * 0.6 }]}
+            adjustsFontSizeToFit={true} 
+            numberOfLines={1}
+            minimumFontScale={0.1}
+          >
             {item.value}
           </Text>
         ) : (
@@ -173,18 +175,20 @@ export default function MatchingGame() {
   return (
     <LinearGradient colors={['#a8e6cf', '#dcedc1']} style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.push('/math')}>
-          <View style={styles.circleBtn}><Ionicons name="arrow-back" size={24} color="#555" /></View>
+        <TouchableOpacity onPress={() => router.push('/math' as any)}>
+           <View style={styles.circleBtn}><Ionicons name="arrow-back" size={24} color="#555" /></View>
         </TouchableOpacity>
-        <Text style={styles.title}>Bé Ghép Số (1-12) 🧩</Text>
+        <Text style={styles.title}>Bé Ghép Số</Text>
         <TouchableOpacity onPress={startNewGame}>
-           <View style={styles.circleBtn}><Ionicons name="refresh" size={24} color="#555" /></View>
+             <View style={styles.circleBtn}><Ionicons name="refresh" size={24} color="#555" /></View>
         </TouchableOpacity>
       </View>
 
       <View style={styles.gameArea}>
-        <View style={styles.rowLabelContainer}><Text style={styles.rowLabel}>Tìm số</Text></View>
-        <View style={styles.row}>{topRow.map(item => renderCard(item))}</View>
+        <Text style={styles.rowLabel}>Tìm số</Text>
+        <View style={styles.row}>
+          {topRow.map(item => renderCard(item))}
+        </View>
 
         <View style={styles.divider}>
           <View style={styles.line} />
@@ -192,8 +196,10 @@ export default function MatchingGame() {
           <View style={styles.line} />
         </View>
 
-        <View style={styles.row}>{bottomRow.map(item => renderCard(item))}</View>
-        <View style={styles.rowLabelContainer}><Text style={styles.rowLabel}>Tìm hình</Text></View>
+        <View style={styles.row}>
+          {bottomRow.map(item => renderCard(item))}
+        </View>
+        <Text style={styles.rowLabel}>Tìm lượng</Text>
       </View>
 
       {showConfetti && (
@@ -208,35 +214,51 @@ export default function MatchingGame() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 10 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', height: 40, paddingHorizontal: 10 },
-  title: { fontSize: 22, fontWeight: 'bold', color: '#333' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', height: 50, marginBottom: 10 },
+  title: { fontSize: 20, fontWeight: 'bold', color: '#333' },
   circleBtn: { backgroundColor: 'white', padding: 8, borderRadius: 20, elevation: 3 },
-  gameArea: { flex: 1, justifyContent: 'center' },
-  rowLabelContainer: { alignItems: 'center', marginBottom: 2, marginTop: 2 },
-  rowLabel: { backgroundColor: 'rgba(255,255,255,0.6)', paddingHorizontal: 10, paddingVertical: 2, borderRadius: 8, color: '#006266', fontWeight: 'bold', fontSize: 10 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 2, gap: 6 },
-  divider: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginVertical: 5, opacity: 0.6 },
-  line: { height: 1, backgroundColor: 'white', flex: 0.4, marginHorizontal: 10 },
+  gameArea: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   
-  // Card không fix cứng nữa, mà flex để tự giãn
-  card: { flex: 1, aspectRatio: 0.8, borderRadius: 12, justifyContent: 'center', alignItems: 'center', elevation: 3, shadowColor: '#000', shadowOffset: {width: 0, height: 1}, shadowOpacity: 0.2, shadowRadius: 2 },
-  
-  cardTop: { backgroundColor: '#fff' }, 
-  cardBottom: { backgroundColor: '#fff', padding: 2 },
-  cardSelected: { borderColor: '#ff6b6b', borderWidth: 3, transform: [{scale: 1.02}] },
-  cardMatched: { backgroundColor: '#b8e994', opacity: 0.5 },
-  
-  // Cỡ chữ số cũng linh hoạt luôn
-  numberText: { fontWeight: 'bold', color: '#079992' },
-  
-  imgContainer: { 
-    height: '100%', 
+  rowLabel: { 
+    color: '#006266', fontWeight: 'bold', fontSize: 12, marginBottom: 5, marginTop: 5,
+    backgroundColor: 'rgba(255,255,255,0.5)', paddingHorizontal: 8, borderRadius: 4
+  },
+
+  row: { 
     flexDirection: 'row', 
-    flexWrap: 'wrap',
-    alignContent: 'space-evenly', 
-    justifyContent: 'space-evenly',
-    alignItems: 'center'
+    justifyContent: 'space-between', 
+    width: '100%', 
+  },
+
+  divider: { flexDirection: 'row', alignItems: 'center', width: '80%', marginVertical: 10, opacity: 0.6 },
+  line: { height: 1, backgroundColor: 'white', flex: 1, marginHorizontal: 10 },
+
+  card: { 
+    borderRadius: 8, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    elevation: 4, 
+    shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.2, shadowRadius: 2,
+    padding: 3, // Padding nhỏ cho thẻ
+    overflow: 'hidden', 
   },
   
-  lottie: { position: 'absolute', width: '100%', height: '100%', zIndex: 10, pointerEvents: 'none' }
+  cardTop: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#eee' }, 
+  cardBottom: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#eee' },
+  cardSelected: { borderColor: '#ff6b6b', borderWidth: 3 },
+  cardMatched: { opacity: 0.3, transform: [{scale: 0.9}] },
+  
+  numberText: { fontWeight: 'bold', color: '#079992', textAlign: 'center' },
+  
+  imgContainer: { 
+    width: '100%', 
+    height: '100%', 
+    flexDirection: 'row', 
+    flexWrap: 'wrap', 
+    justifyContent: 'center', // Căn giữa ngang
+    alignContent: 'center',   // Căn giữa dọc (Quan trọng để không bị lệch lên trên)
+    alignItems: 'center',
+  },
+  
+  lottie: { position: 'absolute', width: '100%', height: '100%', zIndex: 99, pointerEvents: 'none' }
 });

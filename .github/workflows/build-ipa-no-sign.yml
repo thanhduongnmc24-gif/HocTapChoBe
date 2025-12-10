@@ -33,9 +33,10 @@ jobs:
         run: npm install --legacy-peer-deps
 
       - name: 🚀 Build IPA
-        # [SỬA LỖI Ở ĐÂY] Thêm env để truyền Token trực tiếp cho lệnh build
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          # [CHIÊU CUỐI Ở ĐÂY] Ép buộc EAS dùng legacy-peer-deps khi nó tự chạy npm ci
+          NPM_CONFIG_LEGACY_PEER_DEPS: "true"
         run: eas build --platform ios --profile preview --local --non-interactive --output app.ipa
 
       - name: 📤 Upload Artifact
