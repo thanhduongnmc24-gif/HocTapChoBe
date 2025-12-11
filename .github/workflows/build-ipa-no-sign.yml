@@ -8,7 +8,6 @@ jobs:
     name: Build iOS IPA
     runs-on: macos-latest
 
-    # Chỉ định thư mục làm việc mặc định là 'ipa'
     defaults:
       run:
         working-directory: ./ipa
@@ -21,27 +20,29 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 18
-          # Không dùng cache để tránh lỗi lock file
-
+          # Tèo đã xóa dòng cache ở đây để đảm bảo không dính lỗi Cache Service 400
+          
       - name: ⚙️ Setup EAS CLI
         uses: expo/expo-github-action@v8
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
-      - name: 📦 Install dependencies
-        run: npm install --legacy-peer-deps
+      - name: 🧹 Clean Cache & Install dependencies
+        # Tèo thêm bước clean cache để tránh xung đột và cài mới hoàn toàn
+        run: |
+          npm cache clean --force
+          npm install --legacy-peer-deps
 
       - name: 🚀 Build IPA
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-          # [CHIÊU CUỐI Ở ĐÂY] Ép buộc EAS dùng legacy-peer-deps khi nó tự chạy npm ci
           NPM_CONFIG_LEGACY_PEER_DEPS: "true"
-        run: eas build --platform ios --profile preview --local --non-interactive --output app.ipa
+        # Tèo thêm tham số --clear-cache cho EAS luôn cho chắc
+        run: eas build --platform ios --profile preview --local --non-interactive --output app.ipa --clear-cache
 
       - name: 📤 Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ios-ipa
-          # File kết quả nằm trong thư mục ipa
           path: ipa/app.ipa
