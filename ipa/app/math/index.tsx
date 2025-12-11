@@ -4,10 +4,21 @@ import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
+// [Tèo thêm] Import SoundManager (lùi lại 1 cấp thư mục để tìm utils)
+import SoundManager from '../utils/SoundManager';
+
 export default function MathMenu() {
   return (
     <LinearGradient colors={['#f6d365', '#fda085']} style={styles.container}>
-      <TouchableOpacity style={styles.backBtn} onPress={() => router.push('/')}>
+      
+      {/* Nút Back về Trang Chủ */}
+      <TouchableOpacity 
+        style={styles.backBtn} 
+        onPress={() => {
+            SoundManager.play('click'); // [Tèo thêm]
+            router.push('/');
+        }}
+      >
         <Ionicons name="home" size={30} color="#d35400" />
         <Text style={{fontWeight: 'bold', color: '#d35400'}}> Trang Chủ</Text>
       </TouchableOpacity>
@@ -16,7 +27,13 @@ export default function MathMenu() {
       
       <View style={styles.menuList}>
         {/* Nút vào Game Tính Toán */}
-        <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/math/calculation')}>
+        <TouchableOpacity 
+            style={styles.menuItem} 
+            onPress={() => {
+                SoundManager.play('click'); // [Tèo thêm]
+                router.push('/math/calculation');
+            }}
+        >
           <LinearGradient colors={['#84fab0', '#8fd3f4']} style={styles.iconBox}>
             <Text style={{fontSize: 40}}>➕</Text>
           </LinearGradient>
@@ -28,7 +45,13 @@ export default function MathMenu() {
         </TouchableOpacity>
 
         {/* Nút vào Game Ghép Nối */}
-        <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/math/matching')}>
+        <TouchableOpacity 
+            style={styles.menuItem} 
+            onPress={() => {
+                SoundManager.play('click'); // [Tèo thêm]
+                router.push('/math/matching');
+            }}
+        >
           <LinearGradient colors={['#a1c4fd', '#c2e9fb']} style={styles.iconBox}>
             <Text style={{fontSize: 40}}>🧩</Text>
           </LinearGradient>
@@ -39,7 +62,7 @@ export default function MathMenu() {
           <Ionicons name="play-circle" size={40} color="#0984e3" />
         </TouchableOpacity>
 
-        {/* Nút chờ game mới */}
+        {/* Nút chờ game mới (Disabled nên không cần gắn âm thanh) */}
         <TouchableOpacity style={[styles.menuItem, {opacity: 0.6}]} disabled>
           <View style={[styles.iconBox, {backgroundColor: '#ddd'}]}>
             <Text style={{fontSize: 40}}>🔒</Text>

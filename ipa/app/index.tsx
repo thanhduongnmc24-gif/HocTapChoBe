@@ -3,6 +3,8 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, useWindowDimensio
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+// [Tèo thêm]
+import SoundManager from './utils/SoundManager';
 
 export default function Home() {
   const { width } = useWindowDimensions();
@@ -11,7 +13,12 @@ export default function Home() {
   const renderCard = (title: string, icon: any, color: string, onPress: () => void, disabled = false) => (
     <TouchableOpacity
       style={[styles.card, { width: cardWidth, backgroundColor: color, opacity: disabled ? 0.6 : 1 }]}
-      onPress={onPress}
+      onPress={() => {
+        if (!disabled) {
+          SoundManager.play('click'); // [Tèo thêm] Click thì kêu cái đã
+          onPress();
+        }
+      }}
       activeOpacity={0.8}
       disabled={disabled}
     >

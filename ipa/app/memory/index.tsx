@@ -7,6 +7,8 @@ import LottieView from 'lottie-react-native';
 
 // Dùng kho ảnh có sẵn
 import { GAME_IMAGES } from '../math/imageList'; 
+// [Tèo thêm] Import bộ quản lý âm thanh
+import SoundManager from '../utils/SoundManager';
 
 const DEFAULT_IMAGES = [
   { uri: 'https://cdn-icons-png.flaticon.com/512/3769/3769035.png' }, 
@@ -89,6 +91,9 @@ export default function MemoryGame() {
   const handleTapCard = (card: any) => {
     if (isLockBoard || card.isFlipped || card.isMatched) return;
 
+    // [Tèo thêm] Phát tiếng Click
+    SoundManager.play('click');
+
     const newCards = [...cards];
     const index = newCards.findIndex(c => c.id === card.id);
     newCards[index].isFlipped = true;
@@ -108,18 +113,28 @@ export default function MemoryGame() {
     const [card1, card2] = selected;
 
     if (card1.imgSource === card2.imgSource) {
+      // --- ĐÚNG ---
+      SoundManager.play('correct'); // [Tèo thêm] Âm thanh đúng
+
       const newCards = currentCards.map(c => 
         (c.id === card1.id || c.id === card2.id) ? { ...c, isMatched: true, isFlipped: true } : c
       );
       setCards(newCards);
       setMatches(m => {
         const newMatches = m + 1;
-        if (newMatches === 6) setTimeout(() => setShowConfetti(true), 500);
+        if (newMatches === 6) {
+            // --- THẮNG ---
+            SoundManager.play('win'); // [Tèo thêm] Nhạc chiến thắng
+            setTimeout(() => setShowConfetti(true), 500);
+        }
         return newMatches;
       });
       setSelectedCards([]);
       setIsLockBoard(false);
     } else {
+      // --- SAI ---
+      SoundManager.play('wrong'); // [Tèo thêm] Âm thanh sai để bé biết
+
       setTimeout(() => {
         const newCards = currentCards.map(c => 
           (c.id === card1.id || c.id === card2.id) ? { ...c, isFlipped: false } : c
@@ -134,8 +149,14 @@ export default function MemoryGame() {
   return (
     <LinearGradient colors={['#ff9a9e', '#fad0c4']} style={styles.container}>
       <View style={styles.header}>
-        {/* Nút Back dùng style backBtn */}
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        {/* Nút Back */}
+        <TouchableOpacity 
+            onPress={() => {
+                SoundManager.play('click');
+                router.back();
+            }} 
+            style={styles.backBtn}
+        >
           <Ionicons name="arrow-back-circle" size={45} color="white" />
         </TouchableOpacity>
         
@@ -145,7 +166,11 @@ export default function MemoryGame() {
            <Text style={styles.scoreText}>Lượt: {moves}</Text>
         </View>
         
-        <TouchableOpacity onPress={startNewGame}>
+        {/* Nút Reset */}
+        <TouchableOpacity onPress={() => {
+            SoundManager.play('click');
+            startNewGame();
+        }}>
            <Ionicons name="refresh-circle" size={45} color="white" />
         </TouchableOpacity>
       </View>
@@ -170,7 +195,13 @@ export default function MemoryGame() {
              autoPlay loop={false} style={styles.lottie} resizeMode="cover"
            />
            <Text style={styles.winText}>CHIẾN THẮNG!</Text>
-           <TouchableOpacity style={styles.playAgainBtn} onPress={startNewGame}>
+           <TouchableOpacity 
+                style={styles.playAgainBtn} 
+                onPress={() => {
+                    SoundManager.play('click');
+                    startNewGame();
+                }}
+           >
               <Text style={{color: '#ff9a9e', fontWeight: 'bold', fontSize: 20}}>Chơi Lại</Text>
            </TouchableOpacity>
         </View>
@@ -183,7 +214,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, paddingTop: 40 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 10 },
   
-  // [ĐÃ THÊM LẠI] Style cho nút back
   backBtn: { 
     width: 50, 
     height: 50, 

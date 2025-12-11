@@ -20,17 +20,21 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 18
-          # Tèo đã xóa dòng cache ở đây để đảm bảo không dính lỗi Cache Service 400
-          
+          # [QUAN TRỌNG] Để cache rỗng để ép GitHub không được tìm cache cũ
+          cache: '' 
+
       - name: ⚙️ Setup EAS CLI
         uses: expo/expo-github-action@v8
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
-      - name: 🧹 Clean Cache & Install dependencies
-        # Tèo thêm bước clean cache để tránh xung đột và cài mới hoàn toàn
+      - name: 💣 Nuke & Reinstall Dependencies
+        # Tèo gọi bước này là "Hủy diệt & Làm lại"
+        # Xóa node_modules và package-lock cũ để tránh xung đột
         run: |
+          rm -rf node_modules
+          rm -f package-lock.json
           npm cache clean --force
           npm install --legacy-peer-deps
 
@@ -38,7 +42,7 @@ jobs:
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           NPM_CONFIG_LEGACY_PEER_DEPS: "true"
-        # Tèo thêm tham số --clear-cache cho EAS luôn cho chắc
+        # Thêm cờ --clear-cache để Expo cũng không được nhớ cái cũ
         run: eas build --platform ios --profile preview --local --non-interactive --output app.ipa --clear-cache
 
       - name: 📤 Upload Artifact
